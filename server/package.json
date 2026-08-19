@@ -1,0 +1,22 @@
+{
+  "name": "suivi-maj-gt2-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend temps réel (Express + Socket.io) de l'outil Suivi MAJ GTrans2 — SIFA Logistics",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "cookie": "^1.0.2",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.2",
+    "jose": "^5.9.6",
+    "socket.io": "^4.8.1"
+  }
+}

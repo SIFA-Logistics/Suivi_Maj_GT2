@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(AUTH_MODE=disabled npm run dev)"
+    ]
+  }
+}
