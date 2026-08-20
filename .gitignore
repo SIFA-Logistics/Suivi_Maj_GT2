@@ -4,3 +4,6 @@ server/data/
 data/
 .env
 *.log
+
+# Réglages Claude Code propres à chaque poste (settings.json, lui, se partage)
+.claude/settings.local.json

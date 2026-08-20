@@ -7,11 +7,13 @@ application web React + Node.js avec synchronisation temps réel.
 ## Architecture
 
 - `client/` — React 18 + Vite. Pas de TypeScript, pas de framework CSS.
-- `server/` — Node.js 22, Express 4 + Socket.io 4, ES modules (`"type": "module"`).
-- Persistance : **un fichier JSON** (`data/state.json`). Pas de base de données —
-  c'est un choix assumé, ne pas proposer d'en introduire une.
+- `server/` — Node.js ≥ 20.6, Express 4 + Socket.io 4, ES modules (`"type": "module"`).
+- Persistance : **un fichier JSON** (`server/data/state.json`). Pas de base de
+  données — c'est un choix assumé, ne pas proposer d'en introduire une.
 - Authentification : SSO Microsoft Entra ID (OIDC, Authorization Code + PKCE),
   implémenté à la main dans `server/src/auth.js` avec `jose`.
+- Déploiement : service **systemd** sur serveur Linux (voir §3 du README).
+  Pas de conteneur — ne pas proposer de réintroduire Docker.
 
 ## Règles impératives
 
@@ -52,17 +54,14 @@ d'un collègue effacerait la saisie en cours.
 ## Commandes
 
 ```bash
-# Backend seul, sans SSO (développement)
-cd server && npm install && AUTH_MODE=disabled npm run dev
+# Backend seul (config lue dans server/.env — y mettre AUTH_MODE=disabled)
+cd server && npm install && npm run dev
 
 # Frontend avec rechargement à chaud (proxy vers :8080)
 cd client && npm install && npm run dev        # http://localhost:5173
 
 # Build de production
 cd client && npm run build
-
-# Pile complète en conteneur
-docker compose up -d --build
 ```
 
 Aperçu multi-utilisateurs sans SSO : ouvrir
@@ -75,8 +74,8 @@ fenêtres. Le paramètre `as` est **ignoré** dès que `AUTH_MODE=entra`.
   volontairement au démarrage en listant ce qui manque.
 - Derrière un reverse proxy, les en-têtes `Upgrade`/`Connection` doivent être
   relayés, sinon le WebSocket retombe en long-polling (voir §3 du README).
-- `data/` doit être monté hors du conteneur, sinon l'état est perdu à chaque
-  reconstruction de l'image.
+- La configuration vient de `server/.env`, lu par l'option native `--env-file`
+  de Node (pas de `dotenv`). Fichier absent → le serveur s'arrête sur un `ENOENT`.
 - Pas de résolution de conflit fine : deux personnes sur le *même* champ à la
   même seconde → la dernière écriture l'emporte.
 

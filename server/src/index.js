@@ -28,8 +28,8 @@ app.set('trust proxy', true);
 app.use(cookieParser());
 app.use(express.json({ limit: '5mb' }));
 
-// Sonde de santé : utilisée par docker-compose (healthcheck) et par un
-// éventuel reverse proxy. Volontairement non authentifiée.
+// Sonde de santé : utilisée par la supervision et par un éventuel reverse
+// proxy. Volontairement non authentifiée.
 app.get('/healthz', (req, res) => {
   res.json({ ok: true, rev: store.getRev(), lastSavedAt: store.getLastSavedAt() });
 });
@@ -181,7 +181,7 @@ app.get('*', requireAuth, (req, res, next) => {
     if (err) {
       res
         .status(500)
-        .send('Frontend introuvable. Lancez « npm run build » dans /client, ou utilisez l\'image Docker.');
+        .send('Frontend introuvable. Lancez « npm run build » dans /client.');
     }
   });
 });

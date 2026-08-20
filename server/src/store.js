@@ -4,7 +4,7 @@
  *
  * Aucune base de données : le fichier `data/state.json` fait foi.
  * L'écriture est atomique (écriture dans un fichier temporaire puis rename)
- * pour éviter un fichier tronqué en cas d'arrêt du conteneur.
+ * pour éviter un fichier tronqué en cas d'arrêt brutal du serveur.
  */
 
 import fs from 'node:fs';

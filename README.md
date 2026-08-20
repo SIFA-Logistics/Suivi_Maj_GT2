@@ -31,7 +31,8 @@ planning global) via html2canvas.
 
 ## 2. Prérequis
 
-- Un serveur Linux avec **Docker** et **Docker Compose v2**.
+- Un serveur Linux avec **Node.js 20.6 ou plus** (le lancement s'appuie sur
+  l'option native `--env-file`) et **systemd**.
 - Un nom de domaine interne pointant vers ce serveur (ex.
   `maj-gt2.sifalogistics.com`) et, de préférence, un reverse proxy assurant
   **HTTPS** — l'authentification par cookie et l'API presse-papiers du
@@ -42,45 +43,108 @@ planning global) via html2canvas.
 
 ## 3. Déploiement
 
+### Installation
+
 ```bash
-git clone <votre-depot> suivi-maj-gt2
-cd suivi-maj-gt2
+sudo git clone <votre-depot> /opt/suivi-maj-gt2
+cd /opt/suivi-maj-gt2
+
+# Compiler le frontend : produit client/dist/, que le backend sert directement.
+cd client && npm ci && npm run build && cd ..
+
+# Dépendances du backend (production uniquement)
+cd server && npm ci --omit=dev
 
 cp .env.example .env
 # Renseigner PUBLIC_URL, les identifiants Entra ID et SESSION_SECRET.
 # Générer un secret solide :
 openssl rand -base64 48
+```
 
-docker compose up -d --build
-docker compose logs -f
+Le fichier `.env` est lu par le serveur via l'option native `--env-file` de
+Node : il doit se trouver dans `server/`, à côté du `package.json`.
+
+### Service systemd
+
+Créer un compte de service sans connexion, puis lui donner la main sur le code
+et les données :
+
+```bash
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin majgt2
+sudo chown -R majgt2:majgt2 /opt/suivi-maj-gt2
+sudo chmod 600 /opt/suivi-maj-gt2/server/.env   # contient le secret client Entra ID
+```
+
+`/etc/systemd/system/suivi-maj-gt2.service` :
+
+```ini
+[Unit]
+Description=Suivi MAJ GTrans2 — SIFA Logistics
+After=network.target
+
+[Service]
+Type=simple
+User=majgt2
+Group=majgt2
+WorkingDirectory=/opt/suivi-maj-gt2/server
+Environment=NODE_ENV=production
+# node est appelé directement plutôt que via « npm start » : avec npm en tête
+# du service, le SIGTERM d'arrêt n'atteint pas Node, or le serveur s'en sert
+# pour vider sa sauvegarde différée avant de quitter.
+ExecStart=/usr/bin/node --env-file=.env src/index.js
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=15          # marge pour la sauvegarde finale de l'état
+
+# Durcissement : le service n'écrit que dans son dossier de données.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/suivi-maj-gt2/server/data
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now suivi-maj-gt2
+sudo systemctl status suivi-maj-gt2
+sudo journalctl -u suivi-maj-gt2 -f      # suivi des logs
 ```
 
 L'outil écoute sur le port **8080**. Les données de l'équipe sont écrites dans
-le dossier `./data` du serveur hôte (monté dans le conteneur) :
+`server/data/` :
 
 ```
-data/
+server/data/
 ├── state.json          état courant, partagé par toute l'équipe
 └── archives/           instantanés créés avant chaque réinitialisation/import
 ```
 
 ### Sauvegarde
 
-Il n'y a pas de base de données : sauvegarder le dossier `data/` suffit.
+Il n'y a pas de base de données : sauvegarder le dossier `server/data/` suffit.
 
 ```bash
 # Exemple de sauvegarde quotidienne (crontab)
-0 2 * * * tar czf /sauvegardes/maj-gt2-$(date +\%F).tgz -C /opt/suivi-maj-gt2 data
+0 2 * * * tar czf /sauvegardes/maj-gt2-$(date +\%F).tgz -C /opt/suivi-maj-gt2/server data
 ```
 
 ### Mise à jour de l'outil
 
 ```bash
-git pull
-docker compose up -d --build
+cd /opt/suivi-maj-gt2
+sudo -u majgt2 git pull
+sudo -u majgt2 sh -c 'cd client && npm ci && npm run build'
+sudo -u majgt2 sh -c 'cd server && npm ci --omit=dev'
+sudo systemctl restart suivi-maj-gt2
 ```
 
-Le dossier `data/` étant hors du conteneur, aucune donnée n'est perdue.
+`server/data/` n'est jamais touché par une mise à jour : aucune donnée n'est
+perdue. Le `.env` non plus, il est hors du dépôt.
 
 ### Reverse proxy (exemple nginx)
 
@@ -135,13 +199,17 @@ dérivées de son nom.
 # Terminal 1 — backend, sans SSO
 cd server
 npm install
-AUTH_MODE=disabled npm run dev
+cp .env.example .env      # y mettre AUTH_MODE=disabled
+npm run dev
 
 # Terminal 2 — frontend avec rechargement à chaud
 cd client
 npm install
 npm run dev          # http://localhost:5173 (relaie /api et /socket.io vers :8080)
 ```
+
+La configuration passe entièrement par `server/.env` : aucune variable à poser
+dans le shell, la commande est donc la même sous Linux, macOS et Windows.
 
 > `AUTH_MODE=disabled` désactive toute authentification. À réserver au poste de
 > développement — ne jamais l'utiliser sur un serveur accessible.
@@ -172,15 +240,14 @@ suivi-maj-gt2/
 │       │   ├── format.js      durées, dates, statistiques (repris de l'original)
 │       │   └── flags.jsx      drapeaux SVG (repris de l'original)
 │       └── styles/app.css     CSS de l'original, repris tel quel
-├── server/
-│   └── src/
-│       ├── index.js           Express + Socket.io
-│       ├── store.js           état, persistance JSON, archivage
-│       ├── auth.js            SSO Entra ID (OIDC + PKCE)
-│       └── initialState.js    équipe, tâches et valeurs par défaut
-├── Dockerfile
-├── docker-compose.yml
-└── .env.example
+└── server/
+    ├── .env.example
+    ├── data/                  état persisté (hors dépôt)
+    └── src/
+        ├── index.js           Express + Socket.io
+        ├── store.js           état, persistance JSON, archivage
+        ├── auth.js            SSO Entra ID (OIDC + PKCE)
+        └── initialState.js    équipe, tâches et valeurs par défaut
 ```
 
 ### Protocole temps réel
@@ -212,8 +279,9 @@ d'un champ pendant que quelqu'un y saisit du texte.
 | Bandeau rouge « Connexion au serveur perdue » | Le reverse proxy ne relaie pas les en-têtes `Upgrade`/`Connection` (voir §3) |
 | Boucle de redirection à la connexion | `PUBLIC_URL` ne correspond pas à l'URL réelle, ou l'URI de redirection Entra ID diffère |
 | « Votre compte n'est pas autorisé » | Adresse absente de `ALLOWED_EMAILS` |
-| Le conteneur s'arrête au démarrage | Variables Entra ID manquantes — le message précise lesquelles (`docker compose logs`) |
-| Modifications non conservées après redémarrage | Le volume `./data` n'est pas monté, ou droits d'écriture insuffisants |
+| Le service s'arrête au démarrage | Variables Entra ID manquantes — le message précise lesquelles (`journalctl -u suivi-maj-gt2`) |
+| `ENOENT ... open '.env'` au démarrage | Le fichier `server/.env` est absent (le copier depuis `.env.example`) |
+| Modifications non conservées après redémarrage | `server/data/` n'appartient pas au compte de service, ou manque dans `ReadWritePaths` |
 
 Sonde de santé : `curl http://localhost:8080/healthz`
 
