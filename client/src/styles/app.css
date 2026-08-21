@@ -448,6 +448,7 @@
 .user-chip a{color:#fff;opacity:.75;text-decoration:none;font-weight:600;font-size:11.5px;}
 .user-chip a:hover{opacity:1;text-decoration:underline;}
 .app-header .header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.app-header .header-left{display:flex;align-items:center;gap:14px;}
 .toast{
   position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
   background:var(--blue-dark);color:#fff;
@@ -469,3 +470,65 @@
   padding:4px;
 }
 .icon-flag img{width:22px;height:15px;object-fit:cover;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.12);display:block;}
+
+/* Onglet Planning — poster « Manifeste / itinéraire » */
+#poster{padding:0;border:1px solid #d3dce8;}
+.m-band{
+  background:var(--blue-dark);color:#fff;
+  padding:18px 30px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+}
+.m-brand{display:flex;align-items:center;gap:10px;}
+.m-brand .badge{
+  width:38px;height:38px;border-radius:50%;background:#fff;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none;
+}
+.m-brand .badge img{width:100%;height:100%;object-fit:contain;padding:4px;}
+.m-brand .word{font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;opacity:.92;}
+.m-title{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;}
+.m-title .txt{font-size:21px;font-weight:800;letter-spacing:.02em;}
+.m-title .warn{position:relative;display:inline-flex;align-items:flex-end;justify-content:center;width:22px;height:20px;margin:0;font-size:0;}
+.m-title .warn-tri{
+  position:absolute;top:0;left:0;width:0;height:0;
+  border-left:11px solid transparent;border-right:11px solid transparent;
+  border-bottom:20px solid var(--orange);
+}
+.m-title .warn-mark{position:relative;z-index:1;margin-bottom:2px;color:var(--blue);font-size:11px;font-weight:800;}
+.m-doc-label{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;opacity:.78;white-space:nowrap;font-weight:700;}
+
+.m-body{padding:26px 30px 28px;}
+
+.d-phases{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+.d-phase{
+  background:var(--card-bg);border-radius:14px;padding:16px 18px;
+  border:1px solid #e2e8f2;border-top:4px solid var(--blue-dark);
+  box-shadow:0 3px 10px rgba(10,30,60,.08);
+}
+.d-phase.test{border-top-color:var(--orange);}
+.d-phase h4{margin:0 0 8px;font-size:14px;color:var(--blue-dark);display:flex;align-items:center;gap:7px;}
+.d-phase .date-line{color:var(--orange);font-weight:700;font-size:13px;margin-bottom:8px;}
+.d-phase ul{margin:0;padding:0;list-style:none;font-size:12px;color:#40506a;}
+.d-phase li{margin-bottom:5px;padding-left:14px;position:relative;}
+.d-phase li::before{content:"";position:absolute;left:0;top:6px;width:4px;height:4px;border-radius:50%;background:var(--gray);}
+
+.r-track-wrap{position:relative;padding:32px 6px 4px;margin-bottom:22px;}
+.r-track-line{position:absolute;left:0;right:0;top:61px;height:0;border-top:2px dashed #c9d3e2;}
+.r-stations{display:flex;justify-content:space-between;position:relative;z-index:1;}
+.r-station{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:0 4px;}
+.r-station .date{height:16px;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:#8449b5;white-space:nowrap;}
+.r-station .dot{width:10px;height:10px;border-radius:50%;background:var(--blue-dark);border:2px solid #fff;box-shadow:0 0 0 1px var(--blue-dark);}
+.r-station .card{display:flex;flex-direction:column;align-items:center;gap:5px;}
+.r-station .icon-row .slot{
+  width:26px;height:26px;border-radius:6px;background:var(--blue-light);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+.r-station .name{font-size:11px;font-weight:700;color:#1c2836;line-height:1.3;overflow-wrap:break-word;}
+
+.m-stamp-wrap{display:flex;justify-content:center;}
+.m-stamp{transform:rotate(-1.1deg);border:2px solid var(--red);border-radius:4px;padding:4px;}
+.m-stamp-inner{border:1px dashed var(--red);border-radius:2px;padding:10px 22px;display:flex;align-items:center;gap:10px;color:var(--red);}
+.m-stamp .bang{
+  width:20px;height:20px;border-radius:50%;border:2px solid var(--red);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex:none;
+}
+.m-stamp .txt{font-size:11.5px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;}

@@ -51,10 +51,12 @@ export default function App() {
   return (
     <>
       <div className="app-header">
-        <div>
-
-          <h1>Outils MAJ GT2 — SIFA</h1>
-          <p>Suivi, déploiement par site et génération du planning, dans un seul endroit.</p>
+        <div className="header-left">
+          <img src="/logo_SIFA.png" alt="SIFA Logistics" className="header-logo" />
+          <div>
+            <h1>Outils MAJ GT2 — SIFA</h1>
+            <p>Suivi, déploiement par site et génération du planning, dans un seul endroit.</p>
+          </div>
         </div>
         <div className="header-right">
           <div className="tabs">
@@ -91,14 +93,9 @@ export default function App() {
                 <br />
                 <a href="/auth/logout">Se déconnecter</a>
               </span>
-              
             </div>
-            
           )}
-          <img src="/logo_SIFA.png" alt="SIFA Logistics" className="header-logo" />
-
         </div>
-        
       </div>
 
       {!sync.connected && (

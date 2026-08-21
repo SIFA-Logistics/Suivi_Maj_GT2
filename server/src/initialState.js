@@ -166,11 +166,16 @@ export function createInitialState() {
       version: APP_VERSION,
       prepDate: '2026-06-09',
       prepDateExtra: 'au soir',
+      // Fin d'intervalle facultative : vide, seule la date de début s'affiche.
+      prepEndDate: '',
+      prepEndDateExtra: '',
       prepPoints: `Compléter le fichier de script par équipe
 Renseigner correctement la tâche associée
 Vérifier les procédures et vues modifiées`,
       testDate: '2026-06-10',
       testDateExtra: 'après-midi',
+      testEndDate: '',
+      testEndDateExtra: '',
       testPoints: `Exécutable généré le 10/06 à 12h
 Validation des développements
 Détection des anomalies`,
