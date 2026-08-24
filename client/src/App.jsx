@@ -23,7 +23,7 @@ export default function App() {
   const sync = useSharedState();
 
   useEffect(() => {
-    fetch('/api/config', { credentials: 'include' })
+    fetch('/baha/api/config', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((cfg) => setTeam(cfg.team || []))
       .catch(() => setTeam([]));
@@ -41,7 +41,7 @@ export default function App() {
             {sync.authError
               ? `${sync.authError} `
               : 'Connexion au serveur de synchronisation...'}
-            {sync.authError && <a href="/auth/login" style={{ color: '#fff' }}>Se reconnecter</a>}
+            {sync.authError && <a href="/baha/auth/login" style={{ color: '#fff' }}>Se reconnecter</a>}
           </p>
         </div>
       </div>
@@ -91,7 +91,7 @@ export default function App() {
               <span>
                 {user.name}
                 <br />
-                <a href="/auth/logout">Se déconnecter</a>
+                <a href="/baha/auth/logout">Se déconnecter</a>
               </span>
             </div>
           )}

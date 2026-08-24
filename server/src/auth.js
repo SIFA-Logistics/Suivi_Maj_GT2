@@ -98,7 +98,7 @@ async function createSession(res, user) {
     sameSite: 'lax',
     secure: PUBLIC_URL.startsWith('https://'),
     maxAge: 12 * 60 * 60 * 1000,
-    path: '/',
+    path: '/baha/',
   });
 }
 
@@ -182,7 +182,7 @@ export function registerAuthRoutes(app) {
           sameSite: 'lax',
           secure: PUBLIC_URL.startsWith('https://'),
           maxAge: 10 * 60 * 1000,
-          path: '/',
+          path: '/baha/',
         });
         const url = new URL(authorizeUrl);
         url.searchParams.set('client_id', CLIENT_ID);
@@ -211,7 +211,7 @@ export function registerAuthRoutes(app) {
       const txRaw = req.cookies?.[TX_COOKIE];
       if (!txRaw) return res.redirect('/auth/login');
       const { payload: tx } = await jwtVerify(txRaw, secretKey);
-      res.clearCookie(TX_COOKIE, { path: '/' });
+      res.clearCookie(TX_COOKIE, { path: '/baha/' });
 
       if (!req.query.state || req.query.state !== tx.stateParam) {
         return res.status(400).send('Paramètre « state » invalide.');
@@ -269,7 +269,7 @@ export function registerAuthRoutes(app) {
   });
 
   app.get('/auth/logout', (req, res) => {
-    res.clearCookie(SESSION_COOKIE, { path: '/' });
+    res.clearCookie(SESSION_COOKIE, { path: '/baha/' });
     const url = new URL(logoutUrl);
     url.searchParams.set('post_logout_redirect_uri', PUBLIC_URL);
     res.redirect(url.toString());
