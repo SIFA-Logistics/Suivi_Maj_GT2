@@ -264,7 +264,7 @@ export function registerAuthRoutes(app) {
       res.redirect(next);
     } catch (err) {
       console.error('[auth] erreur de callback :', err);
-      res.status(500).send('Erreur d\'authentification.');
+      res.status(500).send('Erreur d\'authentification..');
     }
   });
 
