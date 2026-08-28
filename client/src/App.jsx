@@ -10,6 +10,11 @@ import TabDeploiement from './components/TabDeploiement.jsx';
 import TabPlanning from './components/TabPlanning.jsx';
 import TabEmails from './components/TabEmails.jsx';
 
+// Prefixe de deploiement, derive de `base` dans vite.config.js.
+// Vite ne reecrit pas les chemins absolus du JSX : sans ce prefixe, le
+// navigateur viserait la racine du domaine, servie par un autre projet.
+const BASE = import.meta.env.BASE_URL;
+
 const TABS = [
   { id: 'suivi', label: '📋 Suivi général' },
   { id: 'deploiement', label: '📍 Déploiement par site' },
@@ -23,7 +28,7 @@ export default function App() {
   const sync = useSharedState();
 
   useEffect(() => {
-    fetch('/baha/api/config', { credentials: 'include' })
+    fetch(`${BASE}api/config`, { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((cfg) => setTeam(cfg.team || []))
       .catch(() => setTeam([]));
@@ -41,7 +46,7 @@ export default function App() {
             {sync.authError
               ? `${sync.authError} `
               : 'Connexion au serveur de synchronisation...'}
-            {sync.authError && <a href="/baha/auth/login" style={{ color: '#fff' }}>Se reconnecter</a>}
+            {sync.authError && <a href={`${BASE}auth/login`} style={{ color: '#fff' }}>Se reconnecter</a>}
           </p>
         </div>
       </div>
@@ -52,7 +57,7 @@ export default function App() {
     <>
       <div className="app-header">
         <div className="header-left">
-          <img src="/logo_SIFA.png" alt="SIFA Logistics" className="header-logo" />
+          <img src={`${BASE}logo_SIFA.png`} alt="SIFA Logistics" className="header-logo" />
           <div>
             <h1>Outils MAJ GT2 — SIFA</h1>
             <p>Suivi, déploiement par site et génération du planning, dans un seul endroit.</p>
@@ -91,7 +96,7 @@ export default function App() {
               <span>
                 {user.name}
                 <br />
-                <a href="/baha/auth/logout">Se déconnecter</a>
+                <a href={`${BASE}auth/logout`}>Se déconnecter</a>
               </span>
             </div>
           )}

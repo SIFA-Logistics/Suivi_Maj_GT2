@@ -81,7 +81,7 @@ export function useSharedState() {
     // est actif (AUTH_MODE=entra).
     const previewAs = new URLSearchParams(window.location.search).get('as');
     const socket = io({
-      path: '/baha/socket.io',
+      path: `${import.meta.env.BASE_URL}socket.io`,
       transports: ['websocket', 'polling'],
       withCredentials: true,
       auth: previewAs ? { as: previewAs } : {},

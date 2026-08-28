@@ -62,7 +62,9 @@ export function Icon({ icon }) {
   if (/^\/.+\.(png|jpe?g|svg|webp|gif)$/i.test(icon || '')) {
     return (
       <span className="icon-flag">
-        <img src={icon} alt="" />
+        {/* Le chemin vient de l'etat partage, sans prefixe de deploiement :
+            on l'ajoute au rendu pour que state.json reste independant de l'URL. */}
+        <img src={import.meta.env.BASE_URL + icon.replace(/^\//, '')} alt="" />
       </span>
     );
   }

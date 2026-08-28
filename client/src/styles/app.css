@@ -532,3 +532,75 @@
   display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex:none;
 }
 .m-stamp .txt{font-size:11.5px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;}
+
+/* ---- Generateur de planning : panneau de saisie et poster ----*/
+@media (min-width:1001px){
+  .layout{grid-template-columns:680px 1fr;}
+}
+.form-panel{max-height:calc(100vh - 150px);}
+
+/* 1000 -> 1120px. html2canvas capture a scale 2 : le PNG exporte passe donc de 2000 a 2240px de large.*/
+#poster{width:1120px;} 
+#posterWrap{overflow-x:auto;} 
+
+/* ---- Onglet Emails : defilement interne au lieu du defilement de page ----*/
+@media (min-width:1001px){
+  /* L'onglet occupe exactement la hauteur disponible... */
+  .tab-page.active:has(> .email-card){
+    height:calc(100vh - 150px);
+    overflow:auto;
+    padding-right:4px;
+    display:flex;
+    flex-direction:column;
+  }
+  /* ...les deux cartes se la partagent a parts egales... */
+  .tab-page.active:has(> .email-card) > .email-card{
+    flex:1 1 0;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  /* ...et la zone de texte absorbe ce qui reste dans sa carte. Sans
+     `min-height:0`, un enfant flex refuse de passer sous sa taille
+     intrinseque — ici les 14 lignes du textarea — et rien ne bougerait. */
+   .tab-page.active:has(> .email-card) .email-preview{  
+    flex:1 1 auto;
+    min-height:0;  
+  } 
+  /* Le texte d'aide, les titres et la barre du bouton gardent leur hauteur :
+     par defaut un enfant flex est compressible, ils se feraient rogner
+     avant que les zones de texte ne cedent quoi que ce soit. */
+  .tab-page.active:has(> .email-card) > .hint,
+  .tab-page.active:has(> .email-card) .email-card h2,
+  .tab-page.active:has(> .email-card) .incident-actions{
+    flex:none;
+  }
+}
+
+/* ---- Generateur de planning : titre fixe en haut, bouton fixe en bas ----
+   Le panneau defilait d'un bloc : titre, champs et bouton d'export ensemble.
+   Il repartit desormais sa hauteur — bornee plus haut a calc(100vh - 150px) —
+   entre trois zones, et seuls les champs defilent. */
+@media (min-width:1001px){
+  .form-panel{display:flex; flex-direction:column; overflow:hidden;}
+  .form-panel > h3.section-title:first-child,
+  .form-panel > .panel-foot{flex:none;}
+  /* `min-height:0` est indispensable : sans lui, un enfant flex refuse de
+     passer sous la hauteur de son contenu et rien ne defilerait.
+     Les marges negatives ramenent la barre de defilement au bord du panneau. */
+  .form-panel > .panel-body{
+    flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
+    margin:0 -18px;
+    padding:0 18px;
+  }
+  .form-panel > .panel-foot{
+    border-top:1px solid #eef2f7;
+    margin:0 -18px -18px;
+    padding:12px 18px 18px;
+    background:var(--card-bg);
+  }
+  /* La marge haute du bouton est portee par le pied de panneau. */
+  .form-panel > .panel-foot > .btn-export{margin-top:0;}
+}

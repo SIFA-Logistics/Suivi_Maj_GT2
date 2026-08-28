@@ -22,6 +22,11 @@ const CLIENT_ID = process.env.ENTRA_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.ENTRA_CLIENT_SECRET || '';
 const PUBLIC_URL = (process.env.PUBLIC_URL || 'http://localhost:8080').replace(/\/$/, '');
 const REDIRECT_URI = `${PUBLIC_URL}/auth/callback`;
+// Prefixe d'URL vu par le navigateur. Le reverse proxy le retire
+// avant Express, qui ne connait donc que /auth et /api : il faut le remettre
+// sur tout ce qui sort vers le client — path des cookies et redirections —
+// sinon le navigateur viserait la racine du domaine, servie par un autre projet.
+const BASE_PATH = new URL(PUBLIC_URL).pathname.replace(/\/*$/, '/');
 const SESSION_COOKIE = 'majgt2_session';
 const TX_COOKIE = 'majgt2_tx';
 const SESSION_TTL = process.env.SESSION_TTL || '12h';
@@ -98,7 +103,7 @@ async function createSession(res, user) {
     sameSite: 'lax',
     secure: PUBLIC_URL.startsWith('https://'),
     maxAge: 12 * 60 * 60 * 1000,
-    path: '/baha/',
+    path: BASE_PATH,
   });
 }
 
@@ -140,7 +145,7 @@ export function requireAuth(req, res, next) {
   verifySessionCookie(req.cookies?.[SESSION_COOKIE]).then((user) => {
     if (!user) {
       if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'non authentifié' });
-      return res.redirect('/auth/login');
+      return res.redirect(`${BASE_PATH}auth/login`);
     }
     req.user = user;
     next();
@@ -157,8 +162,8 @@ export function registerAuthRoutes(app) {
   });
 
   if (AUTH_MODE === 'disabled') {
-    app.get('/auth/login', (req, res) => res.redirect('/'));
-    app.get('/auth/logout', (req, res) => res.redirect('/'));
+    app.get('/auth/login', (req, res) => res.redirect(BASE_PATH));
+    app.get('/auth/logout', (req, res) => res.redirect(BASE_PATH));
     return;
   }
 
@@ -171,7 +176,7 @@ export function registerAuthRoutes(app) {
 
     // Le contexte de la transaction voyage dans un cookie court, signé par
     // le même secret que la session : rien n'est stocké côté serveur.
-    new SignJWT({ stateParam, nonce, codeVerifier, next: req.query.next || '/' })
+    new SignJWT({ stateParam, nonce, codeVerifier, next: req.query.next || BASE_PATH })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('10m')
@@ -182,7 +187,7 @@ export function registerAuthRoutes(app) {
           sameSite: 'lax',
           secure: PUBLIC_URL.startsWith('https://'),
           maxAge: 10 * 60 * 1000,
-          path: '/baha/',
+          path: BASE_PATH,
         });
         const url = new URL(authorizeUrl);
         url.searchParams.set('client_id', CLIENT_ID);
@@ -209,9 +214,9 @@ export function registerAuthRoutes(app) {
         return res.status(401).send(`Authentification refusée : ${req.query.error_description || req.query.error}`);
       }
       const txRaw = req.cookies?.[TX_COOKIE];
-      if (!txRaw) return res.redirect('/auth/login');
+      if (!txRaw) return res.redirect(`${BASE_PATH}auth/login`);
       const { payload: tx } = await jwtVerify(txRaw, secretKey);
-      res.clearCookie(TX_COOKIE, { path: '/baha/' });
+      res.clearCookie(TX_COOKIE, { path: BASE_PATH });
 
       if (!req.query.state || req.query.state !== tx.stateParam) {
         return res.status(400).send('Paramètre « state » invalide.');
@@ -260,7 +265,7 @@ export function registerAuthRoutes(app) {
         initials: mapped.initials,
         isTeamMember: mapped.isTeamMember,
       });
-      const next = typeof tx.next === 'string' && tx.next.startsWith('/') ? tx.next : '/';
+      const next = typeof tx.next === 'string' && tx.next.startsWith('/') ? tx.next : BASE_PATH;
       res.redirect(next);
     } catch (err) {
       console.error('[auth] erreur de callback :', err);
@@ -269,7 +274,7 @@ export function registerAuthRoutes(app) {
   });
 
   app.get('/auth/logout', (req, res) => {
-    res.clearCookie(SESSION_COOKIE, { path: '/baha/' });
+    res.clearCookie(SESSION_COOKIE, { path: BASE_PATH });
     const url = new URL(logoutUrl);
     url.searchParams.set('post_logout_redirect_uri', PUBLIC_URL);
     res.redirect(url.toString());
