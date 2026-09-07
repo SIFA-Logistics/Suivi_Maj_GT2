@@ -35,6 +35,19 @@ export function computeDurationMinutes(zone) {
   return diff;
 }
 
+/**
+ * Durée écoulée depuis l'heure de début jusqu'à maintenant, en minutes.
+ * Jumelle de computeDurationMinutes, pour une mesure encore en cours.
+ */
+export function computeElapsedMinutes(zone, maintenant = new Date()) {
+  const debut = parseTimeToMinutes(zone.startTime);
+  if (debut === null) return null;
+  const courant = maintenant.getHours() * 60 + maintenant.getMinutes();
+  let diff = courant - debut;
+  if (diff < 0) diff += 24 * 60; // intervention commencée la veille
+  return diff;
+}
+
 export function formatDuration(mins) {
   if (mins === null || mins === undefined) return '—';
   const h = Math.floor(mins / 60);

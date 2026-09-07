@@ -604,3 +604,94 @@
   /* La marge haute du bouton est portee par le pied de panneau. */
   .form-panel > .panel-foot > .btn-export{margin-top:0;}
 }
+
+/* ---- Ecran de connexion (AUTH_MODE=local et entra) ----
+   Reprend la carte des liaisons SIFA en fond, recoloree en gris bleute :
+   les points du fichier fourni sont blancs sur fond transparent, donc
+   invisibles sur un fond clair. L'image est appelee depuis le JSX pour
+   suivre `base` si l'application repasse un jour sous un prefixe d'URL. */
+.login-page{
+  position:relative;
+  min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+  background:#fbfcfe;
+  overflow:hidden;
+}
+.login-fond{
+  position:absolute;inset:0;
+  background-position:center 46%;
+  background-size:118% auto;
+  background-repeat:no-repeat;
+  opacity:.9;
+}
+/* Le voile efface la carte derriere la zone de saisie : sans lui, le
+   contraste des champs dependrait du trace qui passe dessous. */
+.login-voile{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse 34% 46% at 50% 50%,
+    rgba(251,252,254,.97) 40%, rgba(251,252,254,0) 75%);
+}
+.login-card{
+  position:relative;z-index:2;
+  background:var(--card-bg);
+  width:100%;max-width:400px;
+  border-radius:16px;
+  padding:34px 34px 28px;
+  box-shadow:0 2px 4px rgba(11,46,89,.06), 0 24px 60px rgba(11,46,89,.14);
+}
+.login-brand{display:flex;flex-direction:column;align-items:center;margin-bottom:26px;}
+.login-logo{width:54px;height:54px;object-fit:contain;}
+.login-brand h1{margin:14px 0 0;font-size:20px;color:var(--blue-dark);letter-spacing:-.2px;}
+.login-brand p{margin:6px 0 0;font-size:12.5px;color:var(--gray);}
+.login-intro,.login-attente{font-size:13px;color:#5b6b82;margin:0 0 16px;text-align:center;}
+/* Le champ mot de passe a besoin de sa propre classe : la regle d'origine
+   style input[type=text], date, time et textarea, mais pas password. Les
+   valeurs sont celles de cette regle, pour que les deux champs soient
+   rigoureusement identiques. */
+.login-champ{
+  width:100%;padding:12px 14px;border:1px solid #d7deea;border-radius:9px;font-size:15px;
+}
+.login-champ:disabled{background:var(--page-bg);color:var(--gray);}
+.login-erreur{
+  background:#fdeaea;color:var(--red);
+  border-radius:9px;padding:10px 12px;margin:14px 0 0;
+  font-size:13px;font-weight:600;
+}
+/* Bleu SIFA plutot que l'orange de .btn-primary : l'orange reste l'accent
+   des actions a l'interieur de l'outil, l'entree se fait en bleu. */
+.login-bouton{
+  display:block;width:100%;margin-top:20px;padding:13px;
+  background:var(--blue);color:#fff;
+  font-size:14.5px;font-weight:700;text-align:center;text-decoration:none;
+}
+.login-bouton:disabled{opacity:.55;cursor:not-allowed;}
+.login-aide{font-size:12px;color:var(--gray);text-align:center;margin:16px 0 0;}
+
+/* Le lien « Se deconnecter » devient un bouton en comptes locaux, la
+   deconnexion passant par un POST : on lui rend l'apparence du lien. */
+.lien-deconnexion{
+  background:none;border:none;padding:0;
+  color:#fff;opacity:.75;font-weight:600;font-size:11.5px;
+  cursor:pointer;
+}
+.lien-deconnexion:hover{opacity:1;text-decoration:underline;}
+
+/* ---- Bloc « Temps passe » : bouton de mesure et compteur en cours ----
+   Le bouton d'arret est orange et non rouge : le rouge de .btn-danger
+   annonce une action destructrice, or arreter une mesure n'efface rien. */
+.time-track .mesure-active{
+  color:var(--green);
+  font-size:12px;
+  font-weight:700;
+}
+.btn-mesure{font-size:12.5px;padding:8px 13px;white-space:nowrap;}
+.btn-depart{background:var(--green);color:#fff;}
+.btn-arret{background:var(--orange);color:#fff;}
+.btn-reinit{background:#e8f0fb;color:var(--blue-dark);}
+/* Le compteur en cours se distingue de la duree figee d'une mesure finie. */
+.time-track .duration-badge.en-cours{
+  background:var(--green);
+  color:#fff;
+  border-color:var(--green);
+}

@@ -9,6 +9,7 @@ import TabSuivi from './components/TabSuivi.jsx';
 import TabDeploiement from './components/TabDeploiement.jsx';
 import TabPlanning from './components/TabPlanning.jsx';
 import TabEmails from './components/TabEmails.jsx';
+import Login from './components/Login.jsx';
 
 // Prefixe de deploiement, derive de `base` dans vite.config.js.
 // Vite ne reecrit pas les chemins absolus du JSX : sans ce prefixe, le
@@ -25,29 +26,47 @@ const TABS = [
 export default function App() {
   const [tab, setTab] = useState('suivi');
   const [team, setTeam] = useState([]);
+  // Le mode d'authentification décide de la façon de se déconnecter : le SSO
+  // part vers Microsoft par un GET, les comptes locaux effacent le cookie
+  // par un POST.
+  const [authMode, setAuthMode] = useState(null);
   const sync = useSharedState();
 
   useEffect(() => {
     fetch(`${BASE}api/config`, { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((cfg) => setTeam(cfg.team || []))
+      .then((cfg) => {
+        setTeam(cfg.team || []);
+        setAuthMode(cfg.authMode || null);
+      })
       .catch(() => setTeam([]));
-  }, []);
+  }, [sync.user]);
+
+  /** Déconnexion des comptes locaux : le cookie effacé, on repart à zéro. */
+  async function seDeconnecter() {
+    try {
+      await fetch(`${BASE}auth/logout`, { method: 'POST', credentials: 'include' });
+    } finally {
+      window.location.reload();
+    }
+  }
 
   const { state, user } = sync;
   const others = sync.presence.filter((p) => p.name !== user?.name);
+
+  // L'écran de connexion passe avant le test de `state` : une session qui
+  // expire en cours d'usage laisserait sinon l'interface affichée mais figée,
+  // sans aucun moyen de se reconnecter.
+  if (sync.authError) {
+    return <Login onConnected={sync.reconnect} />;
+  }
 
   if (!state) {
     return (
       <div className="app-header">
         <div>
           <h1>Outils MAJ GT2 — SIFA</h1>
-          <p>
-            {sync.authError
-              ? `${sync.authError} `
-              : 'Connexion au serveur de synchronisation...'}
-            {sync.authError && <a href={`${BASE}auth/login`} style={{ color: '#fff' }}>Se reconnecter</a>}
-          </p>
+          <p>Connexion au serveur de synchronisation...</p>
         </div>
       </div>
     );
@@ -96,7 +115,13 @@ export default function App() {
               <span>
                 {user.name}
                 <br />
-                <a href={`${BASE}auth/logout`}>Se déconnecter</a>
+                {authMode === 'local' ? (
+                  <button type="button" className="lien-deconnexion" onClick={seDeconnecter}>
+                    Se déconnecter
+                  </button>
+                ) : (
+                  <a href={`${BASE}auth/logout`}>Se déconnecter</a>
+                )}
               </span>
             </div>
           )}

@@ -167,6 +167,19 @@ export function useSharedState() {
     []
   );
 
+  /**
+   * Relance la poignée de main après une connexion réussie.
+   *
+   * Socket.io réessaie tout seul après une coupure réseau, mais pas après un
+   * refus du middleware d'authentification : l'erreur est jugée définitive.
+   * Sans cet appel, le formulaire disparaîtrait sans que l'application ne se
+   * charge, et il faudrait recharger la page à la main.
+   */
+  const reconnect = useCallback(() => {
+    setAuthError(null);
+    socketRef.current?.connect();
+  }, []);
+
   return useMemo(
     () => ({
       state,
@@ -183,7 +196,8 @@ export function useSharedState() {
       removePath,
       reset,
       importState,
+      reconnect,
     }),
-    [state, connected, user, presence, lastSavedAt, authError, notice, setPath, togglePath, insertPath, removePath, reset, importState]
+    [state, connected, user, presence, lastSavedAt, authError, notice, setPath, togglePath, insertPath, removePath, reset, importState, reconnect]
   );
 }

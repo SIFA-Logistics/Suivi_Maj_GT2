@@ -174,8 +174,20 @@ io.on('connection', (socket) => {
 });
 
 // --- Frontend compilé ----------------------------------------------------
-app.use(requireAuth, express.static(CLIENT_DIR, { index: false, maxAge: '1h' }));
-app.get('*', requireAuth, (req, res, next) => {
+// Le SSO redirige un visiteur non authentifié vers Microsoft : le frontend
+// peut donc rester protégé. En comptes locaux, la page de connexion EST un
+// écran du SPA — exiger une session pour l'afficher reviendrait à demander
+// d'être connecté pour accéder au formulaire de connexion.
+//
+// Ce qui compte est protégé dans tous les cas : /api/* garde son requireAuth
+// explicite et la poignée de main Socket.io vérifie le cookie. Seuls le
+// bundle et les logos deviennent publics, sans aucune donnée d'équipe.
+const protegerFrontend = AUTH_MODE === 'entra'
+  ? requireAuth
+  : (req, res, next) => next();
+
+app.use(protegerFrontend, express.static(CLIENT_DIR, { index: false, maxAge: '1h' }));
+app.get('*', protegerFrontend, (req, res, next) => {
   if (req.path.startsWith('/api/') || req.path.startsWith('/socket.io')) return next();
   res.sendFile(path.join(CLIENT_DIR, 'index.html'), (err) => {
     if (err) {

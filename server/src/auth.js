@@ -1,20 +1,28 @@
 /**
- * Authentification SSO Microsoft Entra ID (OpenID Connect, flux
- * « Authorization Code » avec PKCE), sans dépendance à un service tiers.
+ * Authentification, en trois modes pilotés par la variable AUTH_MODE :
  *
- * Deux modes, pilotés par la variable d'environnement AUTH_MODE :
- *  - `entra`    : SSO obligatoire (mode de production).
- *  - `disabled` : aucune authentification — réservé à l'aperçu et aux
- *                 tests en local, tant que l'inscription d'application
- *                 Entra ID n'est pas créée.
+ *  - `local`    : comptes internes (identifiant + mot de passe), vérifiés
+ *                 contre `data/users.json`. Voir `users.js` et
+ *                 `scripts/creer-utilisateur.mjs`.
+ *  - `entra`    : SSO Microsoft Entra ID (OpenID Connect, flux « Authorization
+ *                 Code » avec PKCE), sans dépendance à un service tiers.
+ *  - `disabled` : aucune authentification — réservé à l'aperçu et aux tests
+ *                 en local.
  *
- * La session est un JWT HS256 signé localement, déposé dans un cookie
- * HttpOnly. Il n'y a donc aucun magasin de sessions à administrer.
+ * Les trois modes restent du code vivant : basculer de l'un à l'autre ne
+ * demande que de changer AUTH_MODE dans .env. Le SSO n'est donc pas à
+ * réécrire le jour où l'inscription d'application Entra ID sera disponible.
+ *
+ * Quel que soit le mode, la session est un JWT HS256 signé localement et
+ * déposé dans un cookie HttpOnly : il n'y a aucun magasin de sessions à
+ * administrer, et c'est ce qui rend les trois modes interchangeables — le
+ * fournisseur d'identité ne sert qu'à établir l'identité une seule fois.
  */
 
 import crypto from 'node:crypto';
 import { SignJWT, jwtVerify, createRemoteJWKSet } from 'jose';
 import { TEAM_INFO } from './initialState.js';
+import { getUser, verifyPassword, countUsers, USERS_FILE } from './users.js';
 
 const AUTH_MODE = (process.env.AUTH_MODE || 'entra').trim().toLowerCase();
 const TENANT_ID = process.env.ENTRA_TENANT_ID || '';
@@ -51,6 +59,26 @@ if (AUTH_MODE === 'entra') {
     console.error(
       `[auth] AUTH_MODE=entra mais variables manquantes : ${missing.join(', ')}.\n`
       + '       Renseignez-les dans .env, ou utilisez AUTH_MODE=disabled pour un aperçu local.'
+    );
+    process.exit(1);
+  }
+}
+
+if (AUTH_MODE === 'local') {
+  if (!SESSION_SECRET) {
+    console.error(
+      '[auth] AUTH_MODE=local mais SESSION_SECRET est vide.\n'
+      + '       Générez-en un : openssl rand -base64 48'
+    );
+    process.exit(1);
+  }
+  // Sans ce contrôle, le serveur démarrerait normalement et personne ne
+  // pourrait entrer : la panne n'apparaîtrait qu'au premier essai de
+  // connexion, sans indiquer sa cause.
+  if (countUsers() === 0) {
+    console.error(
+      `[auth] AUTH_MODE=local mais aucun compte dans ${USERS_FILE}.\n`
+      + '       Créez-en un : node scripts/creer-utilisateur.mjs <identifiant> "<Nom>" <INITIALES>'
     );
     process.exit(1);
   }
@@ -144,12 +172,59 @@ export function requireAuth(req, res, next) {
   }
   verifySessionCookie(req.cookies?.[SESSION_COOKIE]).then((user) => {
     if (!user) {
-      if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'non authentifié' });
-      return res.redirect(`${BASE_PATH}auth/login`);
+      // En mode `local`, la page de connexion est un écran du SPA : il n'y a
+      // aucune URL serveur vers laquelle rediriger, et rediriger vers une
+      // route inexistante donnerait une boucle. Le client lit ce 401 et
+      // affiche le formulaire.
+      if (AUTH_MODE === 'entra' && !req.path.startsWith('/api/')) {
+        return res.redirect(`${BASE_PATH}auth/login`);
+      }
+      return res.status(401).json({ error: 'non authentifié' });
     }
     req.user = user;
     next();
   });
+}
+
+// --- Limitation des tentatives (mode local) ------------------------------
+// Le SSO offrait cette protection sans qu'on ait à y penser : Entra bloque
+// un compte après quelques échecs. Sur des comptes locaux, sans limiteur, un
+// mot de passe de 12 caractères finit par céder à la force brute.
+//
+// La clé combine l'identifiant ET l'adresse IP : bloquer sur le seul
+// identifiant permettrait à n'importe qui de verrouiller volontairement le
+// compte d'un collègue en saisissant cinq mots de passe faux.
+const MAX_ECHECS = 5;
+const DUREE_BLOCAGE_MS = 15 * 60 * 1000;
+const tentatives = new Map();
+
+function cleTentative(req, username) {
+  return `${req.ip}|${String(username || '').toLowerCase()}`;
+}
+
+/** Secondes restantes avant de pouvoir réessayer, 0 si non bloqué. */
+function secondesDeBlocage(cle) {
+  const entree = tentatives.get(cle);
+  if (!entree) return 0;
+  if (Date.now() > entree.jusqua) {
+    tentatives.delete(cle);
+    return 0;
+  }
+  if (entree.echecs < MAX_ECHECS) return 0;
+  return Math.ceil((entree.jusqua - Date.now()) / 1000);
+}
+
+function noterEchec(cle) {
+  // Purge des entrées expirées : sans elle, une rafale d'identifiants
+  // inventés ferait grossir la table sans fin.
+  if (tentatives.size > 500) {
+    const maintenant = Date.now();
+    for (const [k, v] of tentatives) if (maintenant > v.jusqua) tentatives.delete(k);
+  }
+  const entree = tentatives.get(cle) || { echecs: 0, jusqua: 0 };
+  entree.echecs += 1;
+  entree.jusqua = Date.now() + DUREE_BLOCAGE_MS;
+  tentatives.set(cle, entree);
 }
 
 export function registerAuthRoutes(app) {
@@ -166,6 +241,57 @@ export function registerAuthRoutes(app) {
     app.get('/auth/logout', (req, res) => res.redirect(BASE_PATH));
     return;
   }
+
+  // --- Comptes locaux ----------------------------------------------------
+  // Deux routes suffisent : le reste de la chaîne (JWT de session, cookie,
+  // poignée de main Socket.io) est commun aux trois modes.
+  if (AUTH_MODE === 'local') {
+    app.post('/auth/login', async (req, res) => {
+      const username = String(req.body?.username || '').trim();
+      const password = String(req.body?.password || '');
+
+      const cle = cleTentative(req, username);
+      const attente = secondesDeBlocage(cle);
+      if (attente) {
+        return res.status(429).json({
+          error: `Trop de tentatives. Réessayez dans ${Math.ceil(attente / 60)} minute(s).`,
+        });
+      }
+
+      const user = getUser(username);
+      if (!verifyPassword(password, user)) {
+        noterEchec(cle);
+        console.warn(`[auth] échec de connexion pour « ${username} » depuis ${req.ip}`);
+        // Message unique dans les deux cas : distinguer « compte inconnu »
+        // de « mot de passe faux » livrerait la moitié de la réponse.
+        return res.status(401).json({ error: 'Identifiant ou mot de passe incorrect.' });
+      }
+
+      tentatives.delete(cle);
+      const session = {
+        sub: `local:${user.username}`,
+        email: user.email || '',
+        name: user.name,
+        initials: user.initials,
+        isTeamMember: TEAM_INFO.some((t) => t.name === user.name),
+      };
+      await createSession(res, session);
+      res.json({ ok: true, user: session });
+    });
+
+    // POST et non GET, contrairement au SSO : une déconnexion accessible en
+    // GET se déclenche par une simple balise <img> pointant vers cette URL.
+    app.post('/auth/logout', (req, res) => {
+      res.clearCookie(SESSION_COOKIE, { path: BASE_PATH });
+      res.json({ ok: true });
+    });
+
+    return;
+  }
+
+  // --- SSO Entra ID ------------------------------------------------------
+  // Conservé intégralement et fonctionnel : repasser au SSO ne demande que
+  // AUTH_MODE=entra dans .env, sans toucher au code.
 
   // --- Étape 1 : redirection vers Microsoft ---
   app.get('/auth/login', (req, res) => {

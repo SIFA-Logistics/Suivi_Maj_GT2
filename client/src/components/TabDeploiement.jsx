@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   computeDurationMinutes,
+  computeElapsedMinutes,
   computeStats,
   formatDuration,
   starsText,
@@ -19,6 +20,106 @@ import {
 } from '../lib/format.js';
 import { Icon } from '../lib/flags.jsx';
 import { ItemsList, Stars, SummaryCards, SyncedInput } from './Shared.jsx';
+
+/**
+ * Intervalle de rafraîchissement du compteur en cours. L'affichage étant en
+ * minutes, rafraîchir chaque seconde ne changerait rien à l'écran 59 fois
+ * sur 60 ; dix secondes suffisent pour que le passage à la minute suivante
+ * paraisse immédiat.
+ */
+const TICK_COMPTEUR_MS = 10000;
+
+/** Heure courante au format HH:MM, celui des champs de l'état partagé. */
+function heureCourante() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/**
+ * Bloc « Temps passé sur ce site » : les deux heures, le bouton de mesure
+ * et la durée.
+ *
+ * Composant isolé à cause de son timer : porté par TabDeploiement, le
+ * rafraîchissement redessinerait tout l'onglet — liste des sites, 15 étapes,
+ * étoiles, poster — à chaque tick.
+ *
+ * L'état de la mesure n'est pas stocké : il se déduit des deux heures. Un
+ * champ « en cours » supplémentaire serait une seconde source de vérité à
+ * garder cohérente avec elles, y compris quand quelqu'un corrige une heure
+ * à la main.
+ */
+function SuiviTemps({ zone, zoneIndex, sync }) {
+  const [, forcerRendu] = useState(0);
+
+  const enCours = Boolean(zone.startTime) && !zone.endTime;
+  const termine = Boolean(zone.startTime) && Boolean(zone.endTime);
+
+  useEffect(() => {
+    // Le timer ne tourne que pendant une mesure, et disparaît avec elle.
+    if (!enCours) return undefined;
+    const t = setInterval(() => forcerRendu((n) => n + 1), TICK_COMPTEUR_MS);
+    return () => clearInterval(t);
+  }, [enCours]);
+
+  const demarrer = () => sync.setPath(['zones', zoneIndex, 'startTime'], heureCourante());
+  const arreter = () => sync.setPath(['zones', zoneIndex, 'endTime'], heureCourante());
+  const reinitialiser = () => {
+    sync.setPath(['zones', zoneIndex, 'startTime'], '');
+    sync.setPath(['zones', zoneIndex, 'endTime'], '');
+  };
+
+  const minutes = enCours ? computeElapsedMinutes(zone) : computeDurationMinutes(zone);
+  // « 0 min » pendant la première minute laisse croire que rien ne tourne.
+  const texteDuree = enCours && minutes === 0 ? "moins d'1 min" : formatDuration(minutes);
+
+  return (
+    <div className="time-track">
+      <div className="label-title">⏱️ Temps passé sur ce site</div>
+
+      <div className="field">
+        <label>Début :</label>
+        <SyncedInput
+          type="time"
+          value={zone.startTime || ''}
+          onCommit={(v) => sync.setPath(['zones', zoneIndex, 'startTime'], v)}
+        />
+      </div>
+      <div className="field">
+        <label>Fin :</label>
+        <SyncedInput
+          type="time"
+          value={zone.endTime || ''}
+          onCommit={(v) => sync.setPath(['zones', zoneIndex, 'endTime'], v)}
+        />
+      </div>
+
+      {termine && (
+        <button type="button" className="btn-mesure btn-reinit" onClick={reinitialiser}>
+          ↻ Réinitialiser
+        </button>
+      )}
+      {enCours && (
+        <button type="button" className="btn-mesure btn-arret" onClick={arreter}>
+          ⏹ Arrêter
+        </button>
+      )}
+      {!termine && !enCours && (
+        <button type="button" className="btn-mesure btn-depart" onClick={demarrer}>
+          ▶ Démarrer
+        </button>
+      )}
+
+      <span className={`duration-badge${enCours ? ' en-cours' : ''}`}>
+        {enCours ? '⏺ ' : 'Durée : '}
+        {texteDuree}
+      </span>
+      {/* La pastille est ici plutôt que dans le titre : elle qualifie le
+          compteur qu'elle accompagne, et rend inutile un libellé
+          « en cours » répété dans celui-ci. */}
+      {enCours && <span className="mesure-active">● en cours</span>}
+    </div>
+  );
+}
 
 export default function TabDeploiement({ state, team, sync, active }) {
   const [activeZone, setActiveZone] = useState(0);
@@ -97,28 +198,7 @@ export default function TabDeploiement({ state, team, sync, active }) {
 
         <div>
           <div className="zone-panel active">
-            <div className="time-track">
-              <div className="label-title">⏱️ Temps passé sur ce site</div>
-              <div className="field">
-                <label>Début :</label>
-                <SyncedInput
-                  type="time"
-                  value={zone.startTime || ''}
-                  onCommit={(v) => sync.setPath(['zones', zoneIndex, 'startTime'], v)}
-                />
-              </div>
-              <div className="field">
-                <label>Fin :</label>
-                <SyncedInput
-                  type="time"
-                  value={zone.endTime || ''}
-                  onCommit={(v) => sync.setPath(['zones', zoneIndex, 'endTime'], v)}
-                />
-              </div>
-              <span className="duration-badge">
-                Durée : {formatDuration(computeDurationMinutes(zone))}
-              </span>
-            </div>
+            <SuiviTemps zone={zone} zoneIndex={zoneIndex} sync={sync} />
 
             <div className="team-present">
               <div className="label-title">✅ Personnes ayant réalisé la MAJ sur ce site</div>
