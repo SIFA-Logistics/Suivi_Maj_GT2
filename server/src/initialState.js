@@ -117,16 +117,40 @@ Pour cette nouvelle mise à jour, j'aimerais venir accompagné de deux ou trois 
 L'idée serait de positionner des développeurs sur les différents pôles (douane, réception, exploitation, etc.) afin d'assurer un suivi précis et efficace.
 Merci de me faire savoir si cela te convient.`;
 
-const EMAIL_PLANNING = `Objet : Planification des prochaines mises à jour Gtrans
-
-Bonjour,
-
+const EMAIL_PLANNING = `Bonjour,
 Nous souhaitons vous informer que des mises à jour GTrans seront déployées à partir de la semaine prochaine.
 Vous trouverez ci-dessous le planning détaillé des interventions, organisé par région :
+📍 EU (Métropole, Côte d'Ivoire, Sénégal)
+        Samedi 20/06/2026
+•	14h (Métropole)
+•	13h (Côte d'Ivoire, Sénégal)
+📍 AF (Guyane, Guadeloupe, St Martin, Martinique)
+        Mercredi 24/06/2026
+•	7h30 (Métropole)
+•	3h30 (Guyane)
+•	2h30 (Guadeloupe, St Martin, Martinique)
+📍 RE / YT (Réunion, Mayotte)
+        Jeudi 25/06/2026
+•	18h (Métropole)
+•	20h (Mayotte)
+•	21h (Réunion)
+📍 US (États-Unis, Canada)
+        Lundi 29/06/2026
+•	10h (Métropole)
+•	04h (Miami, Montréal)
+•	01h (Los Angeles)
+📍 AS (Singapour)
+        Lundi 29/06/2026
+•	16h (Métropole)
+•	23h (Singapour)
+📍 NC / PF (Nouvelle-Calédonie, Tahiti)
+        Mercredi 01/07/2026
+•	14h (Métropole)
+•	00h (Nouvelle-Calédonie)
+•	03h (Tahiti)
 
-[Insérer ici l'image du planning générée dans l'onglet « Générateur de planning »]
-
-N'hésitez pas à revenir vers nous si vous avez des questions ou besoin d'informations complémentaires.`;
+N’hésitez pas à revenir vers nous si vous avez des questions ou besoin d’informations complémentaires.
+Cordialement,`;
 
 /**
  * Construit un état neuf. Chaque tâche reçoit un identifiant stable
